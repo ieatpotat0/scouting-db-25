@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Raw</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+</head>
+<body>
+    <div class="container">
+        <a href="/">Back to Home</a>
+        <h1>Raw</h1>
+        <table id="raw-table" class="display">
+            <thead>
+                <tr>
+                    <th>Match Number</th>
+                    <th>Team Number</th>
+                    <th>Color</th>
+                    <th>Mobility</th>
+                    <th>Defending</th>
+                    <th>Starting Position</th>
+                    <th>Auto Coral 1</th>
+                    <th>Auto Coral 2</th>
+                    <th>Auto Coral 3</th>
+                    <th>Auto Coral 4</th>
+                    <th>Auto Algae Pro</th>
+                    <th>Auto Algae Net</th>
+                    <th>Tele Coral 1</th>
+                    <th>Tele Coral 2</th>
+                    <th>Tele Coral 3</th>
+                    <th>Tele Coral 4</th>
+                    <th>Tele Algae Pro</th>
+                    <th>Tele Algae Net</th>
+                    <th>Human Player</th>
+                    <th>Ground Pickup</th>
+                    <th>Feeder</th>
+                    <th>Notes</th>
+                    </th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+    $.getJSON("/api/raw", function(data) {
+        let table = $('#raw-table').DataTable({
+            data: data,
+            columns: [
+                { data: "matchnum" },
+                { data: "teamnum" },
+                { data: "color" },
+                { data: "mobility" },
+                { data: "defending" },
+                { data: "startingpos" },
+                { data: "autoncoral1" },
+                { data: "autoncoral2" },
+                { data: "autoncoral3" },
+                { data: "autoncoral4" },
+                { data: "autonalgaepro" },
+                { data: "autonalgaenet" },
+                { data: "telecoral1" },
+                { data: "telecoral2" },
+                { data: "telecoral3" },
+                { data: "telecoral4" },
+                { data: "telealgaepro" },
+                { data: "telealgaenet" },
+                { data: "humanplayer" },
+                { data: "groundpickup" },
+                { data: "feeder" },
+                { data: "notes" }
+            ]
+        });
+    });
+});
+
+    </script>
+</body>
+</html>

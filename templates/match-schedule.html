@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Match Schedule</title>
+</head>
+<body>
+    <a href="/">Back to Home</a>
+    <div class="container">
+        <h1>Match Schedule</h1>
+        <form id="uploadForm" action="/import-schedule" method="POST" enctype="multipart/form-data">
+            <input type="file" id="fileInput" name="file" accept=".csv" style="display: none;">
+            <button type="button" id="uploadButton">
+                Import Match Schedule
+            </button>
+        </form>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Number</th>
+                    <th>Blue 1</th>
+                    <th>Blue 2</th>
+                    <th>Blue 3</th>
+                    <th>Red 1</th>
+                    <th>Red 2</th>
+                    <th>Red 3</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for match in matches %}
+                <tr>
+                    <td>{{ match[0] }}</td>  <!-- Match Number -->
+                    <td>{{ match[1] }}</td>  <!-- Blue 1 -->
+                    <td>{{ match[2] }}</td>  <!-- Blue 2 -->
+                    <td>{{ match[3] }}</td>  <!-- Blue 3 -->
+                    <td>{{ match[4] }}</td>  <!-- Red 1 -->
+                    <td>{{ match[5] }}</td>  <!-- Red 2 -->
+                    <td>{{ match[6] }}</td>  <!-- Red 3 -->
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.getElementById("uploadButton").addEventListener("click", function() {
+            document.getElementById("fileInput").click();
+        });
+
+        document.getElementById("fileInput").addEventListener("change", function() {
+            document.getElementById("uploadForm").submit();
+        });
+    </script>
+</body>
+</html>
+

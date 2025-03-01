@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Team Lookup</title>
+</head>
+<body>
+    git
+    <div class="container">
+        <h1>Team Lookup</h1>
+    </div>
+    <input type="number" id="teamNumber" placeholder="Enter Team Number">
+    <button onclick="lookupTeam()">LOOKUP</button>
+    
+    <div id="output"></div>
+    
+    <script>
+    async function lookupTeam() {
+        let teamNum = document.getElementById("teamNumber").value;
+        if (!teamNum) return;
+    
+        let response = await fetch(`/team_lookup/${teamNum}`);
+        let data = await response.json();
+    
+        if (data.error) {
+            document.getElementById("output").innerHTML = `<p>${data.error}</p>`;
+            return;
+        }
+    
+        let html = `<p>Matches: ${data.matches.join(", ")} (${data.num_matches})</p>`;
+    
+        // Create table
+        html += `<table border="1"><tr><th>Category</th><th>Average</th><th>Median</th></tr>`;
+        for (let [key, value] of Object.entries(data.stats)) {
+            html += `<tr><td>${key}</td><td>${value.average}</td><td>${value.median}</td></tr>`;
+        }
+        html += `</table>`;
+    
+        document.getElementById("output").innerHTML = html;
+    }
+    </script>
+    
+
+</body>
+</html>

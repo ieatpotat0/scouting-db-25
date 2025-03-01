@@ -1,0 +1,78 @@
+body {
+    background-color: rgb(255, 241, 255);
+    /* text-align: center; */
+    margin: 10px;
+    font-family: Arial, Helvetica, sans-serif;
+    justify-content: center; 
+    align-items: center;
+}
+
+nav {
+    align-items: center;
+}
+
+a {
+    background-color: #6960ca;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    display: block;
+    border-radius: 5px 5px 5px 5px;
+    padding: 10px 20px;
+    border: none;
+    margin: 10px;
+    font-family: Arial, Helvetica, sans-serif;
+    width: 40vw;
+}
+
+a:hover {
+    background-color: #5247c7;
+}
+
+/* match-schedule.html */
+
+button {
+    background-color: #6960ca;
+    color: white;
+
+    text-align: center;
+    font-size: 16px;
+    text-decoration: none;
+    display: block;
+    border-radius: 5px 5px 5px 5px;
+    padding: 10px 20px;
+    border: none;
+    margin: 10px;
+    font-family: Arial, Helvetica, sans-serif;
+    width: 40vw;
+    cursor: pointer;
+}
+
+button:hover{
+    background-color: #5247c7;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+}
+
+th, td {
+    border: 1px solid white;
+    padding: 10px;
+}
+
+th {
+    background-color: #222;
+    color: rgb(205, 125, 248);
+}
+
+td {
+    background-color: #333;
+    color: rgb(205, 125, 248);
+}
+
+tr {
+    background-color: black !important;
+}

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <title>TKO Reefscape Tracker</title>
+</head>
+<body>
+    <div class="container">
+        <h1>TKO Reefscape Tracker</h1>
+        <h2>Control Panel</h2>
+        <nav>
+            <a href="/">Refresh</a>
+            <a href="/match-schedule">Match Schedule</a>
+            <a href="/match-lookup">Match Lookup</a>
+            <a href="/team-lookup">Team Lookup</a>
+            <a href="/raw">Display Raw</a>
+            <a href="/averages">Display Averages</a>
+            <a href="/medians">Display Medians</a>
+            <a href="/export">Export</a>
+            <a href="/import">Import</a>
+        </nav>
+
+        <!-- Updated Form: Prevent Redirect + Allow Multiple Files -->
+        <form id="upload-form" enctype="multipart/form-data">
+            <input type="file" name="file" id="file-input" multiple>
+            <button type="submit">Upload</button>
+        </form>
+
+        <!-- Status Message -->
+        <p id="upload-status"></p>
+    </div>
+
+    <script>
+        document.getElementById("upload-form").addEventListener("submit", function(event) {
+            event.preventDefault(); // Prevents page refresh
+            
+            let formData = new FormData(this);
+
+            fetch("/upload-scouting", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("upload-status").innerText = data.message;
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                document.getElementById("upload-status").innerText = "Upload failed!";
+            });
+        });
+    </script>
+</body>
+</html>
