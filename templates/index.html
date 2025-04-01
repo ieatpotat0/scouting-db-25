@@ -11,16 +11,14 @@
         <nav>
             <a href="/">Refresh</a>
             <a href="/match-schedule">Match Schedule</a>
-            <a href="/match-lookup">Match Lookup</a>
             <a href="/team-lookup">Team Lookup</a>
             <a href="/raw">Display Raw</a>
             <a href="/averages">Display Averages</a>
             <a href="/medians">Display Medians</a>
-            <a href="/export">Export</a>
-            <a href="/import">Import</a>
+            <a href="/graphs">Display Graphs</a>
         </nav>
 
-        <!-- Updated Form: Prevent Redirect + Allow Multiple Files -->
+        <!-- prevent redirect, allow multiple files -->
         <form id="upload-form" enctype="multipart/form-data">
             <input type="file" name="file" id="file-input" multiple>
             <button type="submit">Upload</button>
@@ -32,7 +30,7 @@
 
     <script>
         document.getElementById("upload-form").addEventListener("submit", function(event) {
-            event.preventDefault(); // Prevents page refresh
+            event.preventDefault(); //prevents page refresh
             
             let formData = new FormData(this);
 

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Graphs</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <style>
+        .graph-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        .graph-section {
+            width: 48%; /* Adjust width to fit side by side */
+        }
+
+        img {
+            width: 100%; /* Ensure graphs scale properly */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/">Back to Home</a>
+        <h1>Graphs</h1>
+
+        <div class="graph-container">
+            <!-- First Graph Section -->
+            <div class="graph-section">
+                <label>Enter Team Numbers (1-3, comma separated):</label>
+                <input type="text" id="teams1">
+                <br>
+
+                <label>Choose Category:</label>
+                <select id="category1">
+                    <option></option>
+                    <option value="auto_coral">Auto Coral (all levels)</option>
+                    <option value="autoncoral1">Auto Coral L1</option>
+                    <option value="autoncoral2">Auto Coral L2</option>
+                    <option value="autoncoral3">Auto Coral L3</option>
+                    <option value="autoncoral4">Auto Coral L4</option>
+                    <option value="telecoral1">Teleop Coral L1</option>
+                    <option value="telecoral2">Teleop Coral L2</option>
+                    <option value="telecoral3">Teleop Coral L3</option>
+                    <option value="telecoral4">Teleop Coral L4</option>
+                    <option value="tele_coral">Teleop Coral (all levels)</option>
+                    <option value="total_coral">Total Coral</option>
+                    <option value="net">Net</option>
+                    <option value="processor">Processor</option>
+                    <option value="climb">Climb</option>
+                </select>
+                <br>
+
+                <button onclick="fetchGraph(1)">Generate Graph</button>
+
+                <h2>Results:</h2>
+                <img id="graphImage1" style="display:none;">
+            </div>
+
+            <!-- Second Graph Section -->
+            <div class="graph-section">
+                <label>Enter Team Numbers (1-3, comma separated):</label>
+                <input type="text" id="teams2">
+                <br>
+
+                <label>Choose Category:</label>
+                <select id="category2">
+                    <option></option>
+                    <option value="auto_coral">Auto Coral (all levels)</option>
+                    <option value="autoncoral1">Auto Coral L1</option>
+                    <option value="autoncoral2">Auto Coral L2</option>
+                    <option value="autoncoral3">Auto Coral L3</option>
+                    <option value="autoncoral4">Auto Coral L4</option>
+                    <option value="telecoral1">Teleop Coral L1</option>
+                    <option value="telecoral2">Teleop Coral L2</option>
+                    <option value="telecoral3">Teleop Coral L3</option>
+                    <option value="telecoral4">Teleop Coral L4</option>
+                    <option value="tele_coral">Teleop Coral (all levels)</option>
+                    <option value="total_coral">Total Coral</option>
+                    <option value="net">Net</option>
+                    <option value="processor">Processor</option>
+                    <option value="climb">Climb</option>
+                </select>
+                <br>
+
+                <button onclick="fetchGraph(2)">Generate Graph</button>
+
+                <h2>Results:</h2>
+                <img id="graphImage2" style="display:none;">
+            </div>
+        </div>
+
+        <script>
+        async function fetchGraph(graphNum) {
+            let teams = document.getElementById("teams" + graphNum).value.split(',').map(t => t.trim());
+            let category = document.getElementById("category" + graphNum).value;
+            if (teams.length === 0 || !category) return;
+
+            let queryParams = new URLSearchParams();
+            teams.forEach(t => queryParams.append('teams', t));
+            queryParams.append('category', category);
+
+            let response = await fetch(`/generate_graph?${queryParams.toString()}`);
+            let data = await response.text();
+
+            if (response.ok) {
+                document.getElementById("graphImage" + graphNum).src = `data:image/png;base64,${data}`;
+                document.getElementById("graphImage" + graphNum).style.display = "block";
+            } else {
+                alert(data);
+            }
+        }
+        </script>
+    </div>
+</body>
+</html>

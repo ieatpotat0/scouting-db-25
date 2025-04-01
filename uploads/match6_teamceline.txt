@@ -23,4 +23,4 @@ ENDGAME: Shallow
 GROUNDPICKUP: true
 FEEDER: true
 REMOVECORAL: true
-NOTES: nuhhh
+NOTES:

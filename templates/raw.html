@@ -11,6 +11,11 @@
     <div class="container">
         <a href="/">Back to Home</a>
         <h1>Raw</h1>
+
+        <!-- custom search input -->
+        <label for="teamSearch">Search by Team Number:</label>
+        <input type="text" id="teamSearch" placeholder="Enter Team Number">
+
         <table id="raw-table" class="display">
             <thead>
                 <tr>
@@ -36,7 +41,6 @@
                     <th>Ground Pickup</th>
                     <th>Feeder</th>
                     <th>Notes</th>
-                    </th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -45,37 +49,45 @@
 
     <script>
         $(document).ready(function() {
-    $.getJSON("/api/raw", function(data) {
-        let table = $('#raw-table').DataTable({
-            data: data,
-            columns: [
-                { data: "matchnum" },
-                { data: "teamnum" },
-                { data: "color" },
-                { data: "mobility" },
-                { data: "defending" },
-                { data: "startingpos" },
-                { data: "autoncoral1" },
-                { data: "autoncoral2" },
-                { data: "autoncoral3" },
-                { data: "autoncoral4" },
-                { data: "autonalgaepro" },
-                { data: "autonalgaenet" },
-                { data: "telecoral1" },
-                { data: "telecoral2" },
-                { data: "telecoral3" },
-                { data: "telecoral4" },
-                { data: "telealgaepro" },
-                { data: "telealgaenet" },
-                { data: "humanplayer" },
-                { data: "groundpickup" },
-                { data: "feeder" },
-                { data: "notes" }
-            ]
-        });
-    });
-});
+            // Initialize DataTable
+            let table = $('#raw-table').DataTable({
+                data: [],
+                columns: [
+                    { data: "matchnum" },
+                    { data: "teamnum" },
+                    { data: "color" },
+                    { data: "mobility" },
+                    { data: "defending" },
+                    { data: "startingpos" },
+                    { data: "autoncoral1" },
+                    { data: "autoncoral2" },
+                    { data: "autoncoral3" },
+                    { data: "autoncoral4" },
+                    { data: "autonalgaepro" },
+                    { data: "autonalgaenet" },
+                    { data: "telecoral1" },
+                    { data: "telecoral2" },
+                    { data: "telecoral3" },
+                    { data: "telecoral4" },
+                    { data: "telealgaepro" },
+                    { data: "telealgaenet" },
+                    { data: "humanplayer" },
+                    { data: "groundpickup" },
+                    { data: "feeder" },
+                    { data: "notes" }
+                ]
+            });
 
+            // fetch data and load it into the table
+            $.getJSON("/api/raw", function(data) {
+                table.clear().rows.add(data).draw();
+            });
+
+            // custom search: only for team number
+            $('#teamSearch').on('keyup change', function() {
+                table.column(1).search(this.value).draw();
+            });
+        });
     </script>
 </body>
 </html>

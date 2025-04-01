@@ -5,7 +5,6 @@
     <title>Team Lookup</title>
 </head>
 <body>
-    git
     <div class="container">
         <h1>Team Lookup</h1>
     </div>
@@ -29,7 +28,7 @@
     
         let html = `<p>Matches: ${data.matches.join(", ")} (${data.num_matches})</p>`;
     
-        // Create table
+        // create table
         html += `<table border="1"><tr><th>Category</th><th>Average</th><th>Median</th></tr>`;
         for (let [key, value] of Object.entries(data.stats)) {
             html += `<tr><td>${key}</td><td>${value.average}</td><td>${value.median}</td></tr>`;

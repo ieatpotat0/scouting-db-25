@@ -1,5 +1,5 @@
 body {
-    background-color: rgb(255, 241, 255);
+    background-color: rgb(241, 245, 255);
     /* text-align: center; */
     margin: 10px;
     font-family: Arial, Helvetica, sans-serif;
@@ -12,7 +12,7 @@ nav {
 }
 
 a {
-    background-color: #6960ca;
+    background-color: #6079ca;
     color: white;
     text-align: center;
     text-decoration: none;
@@ -26,13 +26,13 @@ a {
 }
 
 a:hover {
-    background-color: #5247c7;
+    background-color: #425fbf;
 }
 
 /* match-schedule.html */
 
 button {
-    background-color: #6960ca;
+    background-color: #6079ca;
     color: white;
 
     text-align: center;
@@ -49,7 +49,7 @@ button {
 }
 
 button:hover{
-    background-color: #5247c7;
+    background-color: #425fbf;
 }
 
 table {
@@ -65,12 +65,12 @@ th, td {
 
 th {
     background-color: #222;
-    color: rgb(205, 125, 248);
+    color: rgb(125, 156, 248);
 }
 
 td {
     background-color: #333;
-    color: rgb(205, 125, 248);
+    color: rgb(125, 156, 248);
 }
 
 tr {

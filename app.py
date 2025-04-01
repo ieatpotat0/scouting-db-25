@@ -4,6 +4,10 @@ import sqlite3
 import csv
 import pandas as pd
 import os
+import matplotlib.pyplot as plt
+import io
+import base64
+import collections
 
 app = Flask(__name__)
 
@@ -34,7 +38,7 @@ def init_db():
             )
         """)
 
-        # Scouting data table
+        # scouting data table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS scouting (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,7 +70,7 @@ def init_db():
             )
         """)
 
-        conn.commit()  #Make sure the changes persist c:
+        conn.commit()  #make sure the changes persist c:
 
 
 def import_scouting_data(filepath):
@@ -75,11 +79,11 @@ def import_scouting_data(filepath):
 
     with open(filepath, "r", encoding="utf-8") as file:
         for line in file:
-            if ": " in line:
-                key, value = line.strip().split(": ", 1)
-                data[key] = value
+            if ":" in line:
+                key, value = line.strip().split(":", 1)
+                data[key] = value.strip() #somehow this only works for notes? starting pos expects integer
 
-    # Ignore fields that aren't in the database
+    # ignore fields that aren't in the database
     expected_keys = {
         "MATCHNUM", "TEAMNUM", "COLOR", "MOBILITY", "DEFENDING", "STARTINGPOS",
         "AUTONCORAL1", "AUTONCORAL2", "AUTONCORAL3", "AUTONCORAL4",
@@ -89,13 +93,26 @@ def import_scouting_data(filepath):
     }
     data = {k: v for k, v in data.items() if k in expected_keys}
 
-    # Convert values to proper types
-    for key in ["MATCHNUM", "TEAMNUM", "STARTINGPOS",
-                "AUTONCORAL1", "AUTONCORAL2", "AUTONCORAL3", "AUTONCORAL4",
-                "AUTONALGAEPRO", "AUTONALGAENET",
-                "TELECORAL1", "TELECORAL2", "TELECORAL3", "TELECORAL4",
-                "TELEALGAEPRO", "TELEALGAENET", "HUMANPLAYER"]:
+    # convert values to proper types
+    # for key in ["MATCHNUM", "TEAMNUM", "STARTINGPOS",
+    #             "AUTONCORAL1", "AUTONCORAL2", "AUTONCORAL3", "AUTONCORAL4",
+    #             "AUTONALGAEPRO", "AUTONALGAENET",
+    #             "TELECORAL1", "TELECORAL2", "TELECORAL3", "TELECORAL4",
+    #             "TELEALGAEPRO", "TELEALGAENET", "HUMANPLAYER"]:
+    #     data[key] = int(data.get(key, 0))
+    for key in ["MATCHNUM", "TEAMNUM",
+            "AUTONCORAL1", "AUTONCORAL2", "AUTONCORAL3", "AUTONCORAL4",
+            "AUTONALGAEPRO", "AUTONALGAENET",
+            "TELECORAL1", "TELECORAL2", "TELECORAL3", "TELECORAL4",
+            "TELEALGAEPRO", "TELEALGAENET", "HUMANPLAYER"]:
         data[key] = int(data.get(key, 0))
+
+# Special handling for STARTINGPOS
+    try:
+        data["STARTINGPOS"] = int(data.get("STARTINGPOS", 1))  # Default to 1
+    except ValueError:
+        data["STARTINGPOS"] = 1  # If invalid (e.g., text), set to 1
+
 
     for key in ["MOBILITY", "DEFENDING", "GROUNDPICKUP", "FEEDER"]:
         data[key] = data.get(key, "false").lower() == "true"
@@ -103,14 +120,14 @@ def import_scouting_data(filepath):
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
 
-        # Check if the entry already exists
+        # check if the entry already exists
         cursor.execute("""
             SELECT COUNT(*) FROM scouting WHERE matchnum = ? AND teamnum = ?
         """, (data["MATCHNUM"], data["TEAMNUM"]))
         count = cursor.fetchone()[0]
 
         if count == 0:
-            # If the entry does not exist, insert it
+            # if the entry does not exist, insert it
             cursor.execute("""
                 INSERT INTO scouting (
                     matchnum, teamnum, color, mobility, defending, startingpos,
@@ -129,7 +146,7 @@ def import_scouting_data(filepath):
                 data["HUMANPLAYER"], data["ENDGAME"], data["GROUNDPICKUP"], data["FEEDER"], data["NOTES"]
             ))
         else:
-            # If the entry exists, overwrite all fields
+            # if the entry exists, overwrite all fields
             cursor.execute("""
                 UPDATE scouting 
                 SET color=?, mobility=?, defending=?, startingpos=?,
@@ -166,12 +183,12 @@ def match_schedule():
         matches = cursor.fetchall()
     return render_template('match-schedule.html', matches=matches)
 
-@app.route('/team-lookup', defaults={'teamnum': None})  # Default to None if not provided
+@app.route('/team-lookup', defaults={'teamnum': None})  # default to None if not provided
 @app.route('/team_lookup/<int:teamnum>')
 def team_lookup(teamnum):
     """Returns scouting data for a given team."""
     if teamnum is None:
-        return render_template("team-lookup.html")  # Load page if no team number is given
+        return render_template("team-lookup.html")  # load page if no team number is given
 
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
@@ -184,11 +201,11 @@ def team_lookup(teamnum):
         columns = [desc[0] for desc in cursor.description]
         matches = [dict(zip(columns, row)) for row in data]
 
-        # Calculate Averages & Medians
+        # calculate avg and med
         stats = {}
         for col in columns:
             if col in ["id", "matchnum", "teamnum", "color", "endgame", "notes"]:
-                continue  # Skip non-numeric fields
+                continue  # skip non-numeric fields
 
             values = [row[col] for row in matches]
             values = [1 if v else 0 for v in values]  #convert boolean fields
@@ -240,7 +257,7 @@ def import_schedule():
             next(csv_reader) # skips a row i think
             for row in csv_reader:
                 try:
-                    # Convert all values to integers before inserting
+                    # convert all values to integers before inserting
                     match_data = [int(value) for value in row]
                     cursor.execute(
                         "INSERT INTO matches (number, blue1, blue2, blue3, red1, red2, red3) VALUES (?, ?, ?, ?, ?, ?, ?)", 
@@ -260,10 +277,10 @@ def load_scouting_data():
         df = pd.read_sql_query("SELECT * FROM scouting", conn)
 
     if df.empty:
-        return pd.DataFrame()  # No data case
+        return pd.DataFrame()  # no data case
 
-    # Compute averages
-    avg_df = round(df.groupby("teamnum").mean(numeric_only=True), 3)  # Ignore non-numeric columns
+    # its averagey time
+    avg_df = round(df.groupby("teamnum").mean(numeric_only=True), 3)  # ignore non-numeric columns
     avg_df["MatchesPlayed"] = df.groupby("teamnum").size()
     avg_df.reset_index(inplace=True)
 
@@ -292,12 +309,12 @@ def medians_data():
     if df.empty:
         return jsonify([])  # No data case
 
-    # Compute medians
+    # medians idksdfdfklsfjldajf
     median_df = df.groupby("teamnum").median(numeric_only=True)
     median_df["MatchesPlayed"] = df.groupby("teamnum").size()
     median_df.reset_index(inplace=True)
 
-    # Convert boolean fields (True/False) to 1/0
+    # convert boolean fields (True/False) to 1/0
     for col in ["mobility", "defending", "groundpickup", "feeder"]:
         if col in median_df:
             median_df[col] = median_df[col].astype(int)
@@ -317,6 +334,101 @@ def raw_data():
 @app.route("/raw")
 def raw():
     return render_template("raw.html")
+
+@app.route("/graphs")
+def graphs():
+    return render_template("graphs.html")
+
+@app.route('/generate_graph', methods=['GET'])
+@app.route('/generate_graph', methods=['GET'])
+def generate_graph():
+    """Generates a graph of scoring trends across matches for up to 3 teams."""
+    teams = request.args.getlist('teams')  # get selected teams
+    category = request.args.get('category')  # dropdown for scoring category
+
+    if not teams or not category:
+        return jsonify({"error": "Please select at least one team and a category"}), 400
+
+    # how to calculate different categories
+    category_mapping = {
+        "auto_coral": "autoncoral1 + autoncoral2 + autoncoral3 + autoncoral4",
+        "autoncoral1": "autoncoral1",
+        "autoncoral2": "autoncoral2",
+        "autoncoral3": "autoncoral3",
+        "autoncoral4": "autoncoral4",
+        "telecoral1": "telecoral1",
+        "telecoral2": "telecoral2",
+        "telecoral3": "telecoral3",
+        "telecoral4": "telecoral4",
+        "tele_coral": "telecoral1 + telecoral2 + telecoral3 + telecoral4",
+        "total_coral": "(autoncoral1 + autoncoral2 + autoncoral3 + autoncoral4) + (telecoral1 + telecoral2 + telecoral3 + telecoral4)",
+        "net": "autonalgaenet + telealgaenet",
+        "processor": "autonalgaepro + telealgaepro",
+        "climb": "endgame",  
+    }
+
+    if category not in category_mapping:
+        return jsonify({"error": "Invalid category selected"}), 400
+
+    sql_query = f"""
+        SELECT matchnum, {category_mapping[category]} FROM scouting 
+        WHERE teamnum = ? ORDER BY matchnum
+    """
+
+    with sqlite3.connect(DATABASE) as conn:
+        cursor = conn.cursor()
+        data = {}
+
+        for team in teams:
+            cursor.execute(sql_query, (team,))
+            results = cursor.fetchall()
+            data[team] = results  # store results per team
+
+    if not any(data.values()):  # check if all data lists are empty
+        return jsonify({"error": "No data found for the selected teams and category"}), 404
+
+
+
+    plt.figure(figsize=(8, 5))
+
+    if category == "climb":
+        ## :)
+        climb_labels = {0: "Parked", 1: "Shallow", 2: "Deep", 3: "None"}
+        
+        for team, results in data.items():
+            climb_counts = collections.Counter(score for _, score in results)
+            
+            # Extract categories & match counts
+            categories = list(climb_labels.values())  # ensure all categories exist on x-axis
+            counts = [climb_counts.get(cat, 0) for cat in categories] 
+            
+            plt.bar(categories, counts, label=f'Team {team}', alpha=0.7)
+            print(results)
+
+        plt.ylabel("Number of Matches")
+        plt.xlabel("Climb Category")
+        plt.title("Climb Distribution Across Matches")
+
+    else:
+        for team, results in data.items():
+            matches, scores = zip(*results) if results else ([], [])
+            plt.plot(matches, scores, marker='o', label=f'Team {team}')
+
+        plt.xlabel("Match Number")
+        plt.ylabel(f"{category.replace('_', ' ').title()} Scored")
+        plt.title(f"{category.replace('_', ' ').title()} Scoring Trend")
+
+    plt.legend()
+    plt.grid(True)
+
+    # save graph to BytesIO
+    img = io.BytesIO()
+    plt.savefig(img, format='png')
+    img.seek(0)
+    plt.close()
+
+    return base64.b64encode(img.getvalue()).decode('utf-8')  # return image as base64
+
 
 
 @app.route('/upload-scouting', methods=['POST'])
@@ -339,6 +451,45 @@ def upload_scouting():
 
     return jsonify({"message": "Upload successful!"})
 
+# ############
+
+# @app.route('/match-lookup', defaults = {'matchnum': None})
+# @app.route('/match_lookup/<int:matchnum>')
+# def match_lookup(matchnum):
+#     """Returns raw scouting data for all teams in a given match."""
+#     with sqlite3.connect(DATABASE) as conn:
+#         cursor = conn.cursor()
+        
+#         # Get all teams in the match
+#         cursor.execute("""
+#             SELECT blue1, blue2, blue3, red1, red2, red3 
+#             FROM matches WHERE number = ?
+#         """, (matchnum,))
+#         match = cursor.fetchone()
+
+#         if not match:
+#             return jsonify({"error": "No data found for this match"}), 404
+
+#         teams = list(match) 
+
+#         # Fetch raw scouting data for each team
+#         cursor.execute("SELECT * FROM scouting WHERE matchnum = ?", (matchnum,))
+#         data = cursor.fetchall()
+
+#         if not data:
+#             return jsonify({"error": "No scouting data found for this match"}), 404
+
+#         # Get column names
+#         columns = [desc[0] for desc in cursor.description]
+
+#         # Convert raw rows into dictionaries
+#         raw_data = [dict(zip(columns, row)) for row in data]
+
+#     return jsonify({"matchnum": matchnum, "raw_data": raw_data})
+
+
+############ i dont need this part hehehehehhehehehehhehawwhahahwhhwhwhwhat?
 if __name__ == '__main__':
     init_db()
+    plt.switch_backend('Agg')
     app.run(debug=True)
