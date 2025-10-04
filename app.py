@@ -489,7 +489,25 @@ def upload_scouting():
 
 
 ############ i dont need this part hehehehehhehehehehhehawwhahahwhhwhwhwhat?
+
+def reload_all_scouting_data():
+    """Reload all scouting .txt files from the uploads folder into the database."""
+    folder = app.config["UPLOAD_FOLDER"]
+    files = [f for f in os.listdir(folder) if f.endswith(".txt")]
+    
+    print(f"Found {len(files)} scouting files to import...")
+
+    for filename in files:
+        filepath = os.path.join(folder, filename)
+        try:
+            import_scouting_data(filepath)
+            print(f"✅ Imported: {filename}")
+        except Exception as e:
+            print(f"❌ Error importing {filename}: {e}")
+
+
 if __name__ == '__main__':
     init_db()
+    reload_all_scouting_data()
     plt.switch_backend('Agg')
     app.run(debug=True)
