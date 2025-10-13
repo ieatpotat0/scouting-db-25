@@ -87,23 +87,33 @@ function showContextMenu(e, target) {
 function setupWorkspaceControls() {
     document.getElementById('home-view-btn').addEventListener('click', resetView);
     document.getElementById('auto-layout-btn').addEventListener('click', autoLayout);
-    document.getElementById('lock-toggle-btn').addEventListener('click', toggleLock);
+    document.getElementById('refresh-graphs-btn').addEventListener('click', refreshAllGraphs);
 }
 
-function toggleLock() {
-    workspaceLocked = !workspaceLocked;
-    const btn = document.getElementById('lock-toggle-btn');
-    const workspace = document.getElementById('graph-workspace');
+function refreshAllGraphs() {
+    const btn = document.getElementById('refresh-graphs-btn');
+    btn.classList.add('spinning');
     
-    btn.classList.toggle('active', workspaceLocked);
-    workspace.classList.toggle('locked', workspaceLocked);
+    // Refresh main chart
+    if (mainChart) {
+        mainChart.destroy();
+        updateMainChart();
+    }
     
-    btn.querySelector('.lock-icon').style.display = workspaceLocked ? 'block' : 'none';
-    btn.querySelector('.unlock-icon').style.display = workspaceLocked ? 'none' : 'block';
-    
-    activeGraphWindows.forEach(win => {
-        win.classList.toggle('locked', workspaceLocked);
+    // Refresh all floating graphs
+    activeGraphWindows.forEach((win, category) => {
+        const canvas = win.querySelector('canvas');
+        const chart = Chart.getChart(canvas);
+        if (chart) {
+            chart.destroy();
+        }
+        renderCategoryChart(canvas.id, category);
     });
+    
+    setTimeout(() => {
+        btn.classList.remove('spinning');
+        updateStackIndicatorsAll();
+    }, 500);
 }
 
 function autoLayout() {
@@ -483,6 +493,9 @@ function makeWindowInteractive(win) {
         .draggable({
             allowFrom: '.window-header',
             listeners: {
+                start(e) {
+                    e.target.classList.add('dragging');
+                },
                 move(e) {
                     if (e.target.classList.contains('maximized')) return;
                     let x = (parseFloat(e.target.dataset.x) || 0) + e.dx;
@@ -491,6 +504,9 @@ function makeWindowInteractive(win) {
                     e.target.style.transform = `translate(${x}px, ${y}px)`;
                     e.target.dataset.x = x;
                     e.target.dataset.y = y;
+                },
+                end(e) {
+                    e.target.classList.remove('dragging');
                 }
             }
         })
@@ -941,7 +957,7 @@ async function createFloatingGraph(category) {
 
     if (workspaceLocked) win.classList.add('locked');
 
-    interact(win).resizable({
+        interact(win).resizable({
         edges: { bottom: true, right: true },
         listeners: {
             start(e) {
@@ -974,6 +990,9 @@ async function createFloatingGraph(category) {
         }
     }).draggable({
         listeners: {
+            start(e) {
+                e.target.classList.add('dragging');
+            },
             move: (e) => {
                 if (workspaceLocked) return;
                 
@@ -985,6 +1004,9 @@ async function createFloatingGraph(category) {
                 e.target.dataset.y = y;
                 
                 savedGraphPositions.set(e.target.id, { x, y, width: parseFloat(e.target.style.width), height: parseFloat(e.target.style.height) });
+            },
+            end(e) {
+                e.target.classList.remove('dragging');
             }
         }
     });
@@ -1535,15 +1557,43 @@ function showConfirmation(message, onConfirm) {
 function initUploadContent() {
     const win = windows['upload'];
     
+    // Handle file input
     win.querySelector('#scouting-input').addEventListener('change', e => {
-        const list = win.querySelector('#file-list');
-        list.innerHTML = Array.from(e.target.files).map(f => `<div class="file-item">${f.name}</div>`).join('');
+        displayFileList(e.target.files);
     });
+    
+    // Handle folder input
+    win.querySelector('#folder-input').addEventListener('change', e => {
+        const txtFiles = Array.from(e.target.files).filter(f => f.name.endsWith('.txt'));
+        displayFileList(txtFiles);
+    });
+
+    function displayFileList(files) {
+        const list = win.querySelector('#file-list');
+        list.innerHTML = Array.from(files).map(f => `<div class="file-item">${f.name}</div>`).join('');
+    }
 
     win.querySelector('#scouting-form').addEventListener('submit', async e => {
         e.preventDefault();
+        
+        // Get files from both inputs
+        let files = [];
+        const fileInput = win.querySelector('#scouting-input');
+        const folderInput = win.querySelector('#folder-input');
+        
+        if (fileInput.files.length > 0) {
+            files = Array.from(fileInput.files);
+        } else if (folderInput.files.length > 0) {
+            files = Array.from(folderInput.files).filter(f => f.name.endsWith('.txt'));
+        }
+        
+        if (files.length === 0) {
+            alert('Please select files or a folder to upload');
+            return;
+        }
+        
         const formData = new FormData();
-        Array.from(win.querySelector('#scouting-input').files).forEach(file => formData.append('files', file));
+        files.forEach(file => formData.append('files', file));
         
         const status = win.querySelector('#scouting-status');
         status.textContent = 'Uploading...';

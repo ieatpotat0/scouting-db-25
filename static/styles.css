@@ -1098,6 +1098,7 @@ body, html {
     align-items: center;
     padding: 2rem;
     flex: 1;
+    overflow-y: auto;
 }
 
 .upload-card-single {
@@ -1119,20 +1120,38 @@ body, html {
     color: #8b949e;
 }
 
+.upload-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
 .file-label {
     display: inline-block;
     padding: 0.75rem 1.5rem;
     background: #3a4a5e;
     border-radius: 4px;
     cursor: pointer;
-    margin-bottom: 1rem;
+    flex: 1;
+    text-align: center;
 }
 
 .file-label:hover {
     background: #4a5a6e;
 }
 
-#file-list {
+.folder-label {
+    background: #5ca8ff;
+    color: #000;
+}
+
+.folder-label:hover {
+    background: #4a96e6;
+}
+
+.file-list-scroll {
+    max-height: 300px;
+    overflow-y: auto;
     margin: 1rem 0;
     font-size: 0.9rem;
 }
@@ -1374,6 +1393,47 @@ body, html {
 .btn-sm {
     padding: 0.5rem 1rem;
     font-size: 0.85rem;
+}
+
+/* ==================== REFRESH BUTTON ANIMATION ==================== */
+.control-btn.spinning {
+    animation: spin 0.5s linear;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ==================== PREVENT TEXT SELECTION DURING DRAG ==================== */
+.graph-window.dragging,
+.app-window.dragging,
+body.resizing-ns *,
+body.resizing-ew * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+}
+
+.graph-workspace.panning,
+.graph-workspace.panning * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+.window-header {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.graph-header {
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 /* ==================== SCROLLBAR ==================== */
