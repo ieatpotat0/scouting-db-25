@@ -156,10 +156,15 @@ def team_performance_data(teamnum):
         cursor = conn.cursor()
         cursor.execute("""
             SELECT matchnum,
-                (autoncoral1 + autoncoral2 + autoncoral3 + autoncoral4 + 
-                 telecoral1 + telecoral2 + telecoral3 + telecoral4 +
-                 autonalgaepro * 2 + autonalgaenet * 2 +
-                 telealgaepro * 2 + telealgaenet * 2) AS total_points,
+                (autoncoral1 * 3 + autoncoral2 * 4 + autoncoral3 * 6 + autoncoral4 * 7 +
+                 autonalgaepro * 6 + autonalgaenet * 3 +
+                 telecoral1 * 2 + telecoral2 * 3 + telecoral3 * 4 + telecoral4 * 5 +
+                 telealgaepro * 6 + telealgaenet * 4 +
+                 CASE WHEN mobility = 1 THEN 3 ELSE 0 END +
+                 CASE WHEN endgame = 'Parked' THEN 2 
+                      WHEN endgame = 'Shallow' THEN 6 
+                      WHEN endgame = 'Deep' THEN 12 
+                      ELSE 0 END) AS total_points,
                 color, notes, scoutername
             FROM scouting WHERE teamnum = ? ORDER BY matchnum
         """, (teamnum,))
