@@ -12,6 +12,17 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 DATABASE = "matches.db"
 
 def init_db():
+    """
+    Initializes the SQLite database by creating the matches and scouting tables.
+    Drops existing tables if they exist and recreates them with the proper schema.
+    Enables foreign key constraints for referential integrity.
+    
+    Parameters:
+        None
+    
+    Returns:
+        None
+    """
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
         cursor.execute("PRAGMA foreign_keys = ON;")
@@ -59,6 +70,21 @@ def init_db():
         conn.commit()
 
 def import_scouting_data(filepath):
+    """
+    Imports scouting data from a text file into the database.
+    Parses key-value pairs from the file, validates and converts data types,
+    then inserts or updates the scouting record in the database.
+    
+    Parameters:
+        filepath (str): Path to the text file containing scouting data in "KEY:VALUE" format
+    
+    Returns:
+        None
+    
+    Raises:
+        Exception: If file cannot be read or data cannot be inserted into database
+    """
+    # Parse the file into a dictionary
     data = {}
     with open(filepath, "r", encoding="utf-8") as file:
         for line in file:
@@ -66,6 +92,7 @@ def import_scouting_data(filepath):
                 key, value = line.strip().split(":", 1)
                 data[key.upper()] = value.strip()
 
+    # Filter to only expected keys
     expected_keys = {
         "MATCHNUM", "TEAMNUM", "COLOR", "MOBILITY", "DEFENDING", "STARTINGPOS",
         "AUTONCORAL1", "AUTONCORAL2", "AUTONCORAL3", "AUTONCORAL4",
@@ -75,31 +102,39 @@ def import_scouting_data(filepath):
     }
     data = {k: v for k, v in data.items() if k in expected_keys}
 
+    # Convert numeric fields to integers
     for key in ["MATCHNUM", "TEAMNUM", "AUTONCORAL1", "AUTONCORAL2", "AUTONCORAL3", "AUTONCORAL4",
                 "AUTONALGAEPRO", "AUTONALGAENET", "TELECORAL1", "TELECORAL2", "TELECORAL3", 
                 "TELECORAL4", "TELEALGAEPRO", "TELEALGAENET", "HUMANPLAYER"]:
         data[key] = int(data.get(key, 0))
 
+    # Convert starting position to integer with error handling
     try:
         data["STARTINGPOS"] = int(data.get("STARTINGPOS", 1))
     except ValueError:
         data["STARTINGPOS"] = 1
 
+    # Convert boolean fields
     for key in ["MOBILITY", "DEFENDING", "GROUNDPICKUP", "FEEDER"]:
         data[key] = data.get(key, "false").lower() == "true"
 
+    # Extract scout name
     scoutername = data.get("YOURNAME", "Unknown")
 
+    # Insert or update database record
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
         
+        # Ensure match exists
         cursor.execute("INSERT OR IGNORE INTO matches (number) VALUES (?)", (data["MATCHNUM"],))
         
+        # Check if record already exists
         cursor.execute("SELECT COUNT(*) FROM scouting WHERE matchnum = ? AND teamnum = ?",
                       (data["MATCHNUM"], data["TEAMNUM"]))
         count = cursor.fetchone()[0]
 
         if count == 0:
+            # Insert new record
             cursor.execute("""
                 INSERT INTO scouting (matchnum, teamnum, color, mobility, defending, startingpos,
                     autoncoral1, autoncoral2, autoncoral3, autoncoral4, autonalgaepro, autonalgaenet,
@@ -113,6 +148,7 @@ def import_scouting_data(filepath):
                   data.get("TELEALGAEPRO"), data.get("TELEALGAENET"), data.get("HUMANPLAYER"), data.get("ENDGAME"),
                   data.get("GROUNDPICKUP"), data.get("FEEDER"), data.get("NOTES"), scoutername))
         else:
+            # Update existing record
             cursor.execute("""
                 UPDATE scouting SET color=?, mobility=?, defending=?, startingpos=?,
                     autoncoral1=?, autoncoral2=?, autoncoral3=?, autoncoral4=?,
@@ -129,6 +165,17 @@ def import_scouting_data(filepath):
         conn.commit()
 
 def reload_all_scouting_data():
+    """
+    Reloads all scouting data from .txt files in the uploads folder.
+    Iterates through all .txt files in the upload folder and imports each one.
+    Errors during import are printed but do not stop the process.
+    
+    Parameters:
+        None
+    
+    Returns:
+        None
+    """
     folder = app.config["UPLOAD_FOLDER"]
     if not os.path.exists(folder): return
     files = [f for f in os.listdir(folder) if f.endswith(".txt")]
@@ -140,10 +187,29 @@ def reload_all_scouting_data():
 
 @app.route('/')
 def index():
+    """
+    Route handler for the home page.
+    
+    Parameters:
+        None (Flask route)
+    
+    Returns:
+        Rendered HTML template for index.html
+    """
     return render_template('index.html')
 
 @app.route('/teams')
 def list_teams():
+    """
+    Route handler that retrieves and returns a list of all unique team numbers
+    that have scouting data in the database.
+    
+    Parameters:
+        None (Flask route)
+    
+    Returns:
+        JSON array of team numbers (integers), sorted in ascending order
+    """
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT DISTINCT teamnum FROM scouting ORDER BY teamnum")
@@ -152,6 +218,21 @@ def list_teams():
 
 @app.route('/api/team_performance/<int:teamnum>')
 def team_performance_data(teamnum):
+    """
+    API endpoint that calculates and returns performance data for a specific team
+    across all their matches. Calculates total points scored based on game scoring rules.
+    
+    Parameters:
+        teamnum (int): The team number to retrieve performance data for
+    
+    Returns:
+        JSON array of objects, each containing:
+            - match (int): Match number
+            - score (int): Total points scored in that match
+            - color (str): Alliance color ('red' or 'blue')
+            - notes (str): Scouting notes for that match
+            - scouter (str): Name of the person who scouted this match
+    """
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -177,6 +258,34 @@ def team_performance_data(teamnum):
 
 @app.route('/api/category_performance/<int:teamnum>/<category>')
 def category_performance_data(teamnum, category):
+    """
+    API endpoint that retrieves performance data for a specific team in a specific category.
+    Supports various scoring categories including coral placement, algae processing, and climbing.
+    
+    Parameters:
+        teamnum (int): The team number to retrieve data for
+        category (str): The performance category to analyze. Valid options:
+            - "auto_coral", "tele_coral", "total_coral": Coral totals
+            - "autoncoral1" through "autoncoral4": Autonomous coral by level
+            - "telecoral1" through "telecoral4": Teleop coral by level
+            - "net", "processor": Algae processing stats
+            - "climb": Endgame climbing statistics
+    
+    Returns:
+        For "climb" category:
+            JSON object with counts: {"Parked": int, "Shallow": int, "Deep": int, "None": int}
+        
+        For all other categories:
+            JSON array of objects, each containing:
+                - match (int): Match number
+                - value (int): The value for this category in this match
+                - color (str): Alliance color
+                - notes (str): Scouting notes
+                - scouter (str): Scout name
+        
+        Error response (400) if invalid category is provided
+    """
+    # Map category names to SQL expressions
     category_mapping = {
         "auto_coral": "autoncoral1 + autoncoral2 + autoncoral3 + autoncoral4",
         "autoncoral1": "autoncoral1", "autoncoral2": "autoncoral2", "autoncoral3": "autoncoral3", "autoncoral4": "autoncoral4",
@@ -189,6 +298,7 @@ def category_performance_data(teamnum, category):
     if category not in category_mapping: return jsonify({"error": "Invalid category"}), 400
 
     if category == "climb":
+        # Special handling for climb category - return counts of each climb type
         with sqlite3.connect(DATABASE) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT endgame FROM scouting WHERE teamnum = ?", (teamnum,))
@@ -199,6 +309,7 @@ def category_performance_data(teamnum, category):
                 if endgame in climb_counts: climb_counts[endgame] += 1
             return jsonify(climb_counts)
     else:
+        # For all other categories, return match-by-match data
         with sqlite3.connect(DATABASE) as conn:
             cursor = conn.cursor()
             cursor.execute(f"SELECT matchnum, {category_mapping[category]} AS value, color, notes, scoutername FROM scouting WHERE teamnum = ? ORDER BY matchnum", (teamnum,))
@@ -208,6 +319,22 @@ def category_performance_data(teamnum, category):
 
 @app.route('/upload-scouting', methods=['POST'])
 def upload_scouting():
+    """
+    Route handler for uploading scouting data files.
+    Accepts multiple .txt files via POST request and imports them into the database.
+    
+    Parameters:
+        None (receives files via Flask request.files)
+    
+    Returns:
+        Success response (200):
+            JSON object: {"message": "Uploaded X file(s)!"}
+        
+        Error responses (400):
+            - If no files in request: {"error": "No file part"}
+            - If no files selected: {"error": "No files selected"}
+            - If import fails: {"error": "Error on [filename]: [error message]"}
+    """
     if 'files' not in request.files: return jsonify({"error": "No file part"}), 400
     files = request.files.getlist('files')
     if not files: return jsonify({"error": "No files selected"}), 400
@@ -226,6 +353,20 @@ def upload_scouting():
 
 @app.route('/api/raw_data')
 def get_raw_data():
+    """
+    API endpoint that retrieves all raw scouting data from the database.
+    Returns all records from the scouting table with all columns.
+    
+    Parameters:
+        None (Flask route)
+    
+    Returns:
+        JSON array of objects, where each object represents a scouting record
+        with all database fields (id, matchnum, teamnum, color, mobility, defending,
+        startingpos, all coral/algae fields, endgame, notes, scoutername, etc.)
+        
+        Results are ordered by match number, then team number
+    """
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM scouting ORDER BY matchnum, teamnum")
@@ -235,6 +376,9 @@ def get_raw_data():
         return jsonify(results)
 
 if __name__ == '__main__':
+    # Initialize the database schema
     init_db()
+    # Load any existing scouting data files
     reload_all_scouting_data()
+    # Start the Flask development server
     app.run(debug=True)
