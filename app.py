@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify  # pyright: ignore[reportMissingImports]
 import sqlite3
 import os
 
@@ -102,11 +102,14 @@ def import_scouting_data(filepath):
     }
     data = {k: v for k, v in data.items() if k in expected_keys}
 
-    # Convert numeric fields to integers
+    # Convert numeric fields to integers with error handling
     for key in ["MATCHNUM", "TEAMNUM", "AUTONCORAL1", "AUTONCORAL2", "AUTONCORAL3", "AUTONCORAL4",
                 "AUTONALGAEPRO", "AUTONALGAENET", "TELECORAL1", "TELECORAL2", "TELECORAL3", 
                 "TELECORAL4", "TELEALGAEPRO", "TELEALGAENET", "HUMANPLAYER"]:
-        data[key] = int(data.get(key, 0))
+        try:
+            data[key] = int(data.get(key, 0))
+        except (ValueError, TypeError):
+            data[key] = 0
 
     # Convert starting position to integer with error handling
     try:
@@ -120,6 +123,10 @@ def import_scouting_data(filepath):
 
     # Extract scout name
     scoutername = data.get("YOURNAME", "Unknown")
+
+    # Validate required fields
+    if "MATCHNUM" not in data or "TEAMNUM" not in data:
+        raise ValueError("MATCHNUM and TEAMNUM are required fields")
 
     # Insert or update database record
     with sqlite3.connect(DATABASE) as conn:
@@ -312,7 +319,8 @@ def category_performance_data(teamnum, category):
         # For all other categories, return match-by-match data
         with sqlite3.connect(DATABASE) as conn:
             cursor = conn.cursor()
-            cursor.execute(f"SELECT matchnum, {category_mapping[category]} AS value, color, notes, scoutername FROM scouting WHERE teamnum = ? ORDER BY matchnum", (teamnum,))
+            sql_expression = category_mapping[category]
+            cursor.execute(f"SELECT matchnum, {sql_expression} AS value, color, notes, scoutername FROM scouting WHERE teamnum = ? ORDER BY matchnum", (teamnum,))
             data = cursor.fetchall()
             results = [{"match": row[0], "value": row[1], "color": row[2].lower() if row[2] else "blue", "notes": row[3] or "No notes", "scouter": row[4] or "Unknown"} for row in data]
             return jsonify(results)
@@ -340,15 +348,18 @@ def upload_scouting():
     if not files: return jsonify({"error": "No files selected"}), 400
     
     success_count = 0
+    errors = []
     for file in files:
         if file.filename and file.filename.endswith(".txt"):
             filepath = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
-            file.save(filepath)
             try:
+                file.save(filepath)
                 import_scouting_data(filepath)
                 success_count += 1
             except Exception as e:
-                return jsonify({"error": f"Error on {file.filename}: {e}"}), 400
+                errors.append(f"Error on {file.filename}: {e}")
+    if errors:
+        return jsonify({"error": "; ".join(errors)}), 400
     return jsonify({"message": f"Uploaded {success_count} file(s)!"})
 
 @app.route('/api/raw_data')
